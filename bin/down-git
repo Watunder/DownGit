@@ -1,0 +1,160 @@
+#!/usr/bin/env node
+
+/**
+ * Reference file: https://github.com/chjj/bpkg/blob/master/bin/bpkg
+ */
+
+import assert from 'assert';
+import { argv, stdout, stderr, exit } from "process";
+import { downloadFilesFromGithub } from "../down-git.mjs";
+
+const VERSION = '0.0.1';
+const HELP = ``;
+
+function getArgs(argv) {
+    assert(Array.isArray(argv));
+
+    const args = [];
+
+    for (let i = 0; i < argv.length; i++) {
+        const arg = argv[i];
+
+        assert(typeof arg === 'string');
+
+        if (arg.startsWith('--')) {
+            // e.g. --opt
+            const index = arg.indexOf('=');
+            if (index !== -1) {
+                // e.g. --opt=val
+                args.push(arg.substring(0, index));
+                args.push(arg.substring(index + 1));
+            } else {
+                args.push(arg);
+            }
+        } else if (arg.startsWith('-')) {
+            if (arg.length > 2) {
+                // e.g. -abc
+                for (let j = 1; j < arg.length; j++)
+                    args.push(`-${arg.charAt(j)}`);
+            } else {
+                // e.g. -a
+                args.push(arg);
+            }
+        } else {
+            // e.g. foo
+            args.push(arg);
+        }
+    }
+
+    return args;
+}
+
+async function parseArgs() {
+    const options = {
+        uncompress: false,
+        token: '',
+        proxy: '',
+        url: ''
+    };
+
+    const args = getArgs(argv);
+
+    for (let i = 2; i < args.length; i++) {
+        const arg = args[i];
+
+        let next = '';
+
+        if (i + 1 < args.length)
+            next = args[i + 1];
+
+        switch (arg) {
+            case '-v':
+            case '--version': {
+                stdout.write(VERSION + '\n');
+                exit(0);
+                break;
+            }
+
+            case '-h':
+            case '--help': {
+                stdout.write(HELP + '\n');
+                exit(0);
+                break;
+            }
+
+            case '--uncompress': {
+                options.uncompress = true;
+                break;
+            }
+
+            case '--token': {
+                if (!next || next[0] === '-')
+                    throw new Error(`Invalid option for: ${arg}.`);
+
+                options.token = next;
+
+                i += 1;
+                break;
+            }
+
+            case '--proxy': {
+                if (!next || next[0] === '-')
+                    throw new Error(`Invalid option for: ${arg}.`);
+
+                options.proxy = next;
+
+                i += 1;
+                break;
+            }
+
+            case '--url': {
+                if (!next || next[0] === '-')
+                    throw new Error(`Invalid option for: ${arg}.`);
+
+                options.url = next;
+
+                i += 1;
+                break;
+            }
+
+            default: {
+                if (arg.length === 0 || arg[0] === '-')
+                    throw new Error(`Invalid argument: ${arg}.`);
+
+                if ((options.url?.trim?.() || '').length === 0)
+                    options.url = arg;
+                else
+                    throw new Error(`Invalid argument: ${arg}.`);
+
+                break;
+            }
+        }
+    }
+
+    if ((options.url?.trim?.() || '').length === 0)
+        throw new Error('down-git: no url specified.');
+
+    return options;
+}
+
+
+(async () => {
+    let options;
+
+    try {
+        options = await parseArgs();
+    } catch (e) {
+        stderr.write(e.message + '\n');
+        return 1;
+    }
+
+    downloadFilesFromGithub(options);
+
+    return 0;
+})().then((code) => {
+    process.exitCode = code;
+    process.on('exit', () => exit(code));
+}).catch((err) => {
+    stderr.write(err.stack + '\n');
+    exit(1);
+});

@@ -1,0 +1,14 @@
+{
+  "name": "down-git",
+  "version": "0.0.1",
+  "license": "MIT",
+  "module": "./down-git.mjs",
+  "bin": {
+    "down-git": "./bin/down-git"
+  },
+  "dependencies": {
+    "axios": "^1.10.0",
+    "https-proxy-agent": "^7.0.6",
+    "jszip": "^3.10.1"
+  }
+}
