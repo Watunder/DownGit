@@ -5,11 +5,22 @@
  */
 
 import assert from 'assert';
-import { argv, stdout, stderr, exit } from "process";
-import { downloadFilesFromGithub } from "../down-git.mjs";
+import { argv, stdout, stderr, exit } from 'process';
+import { downloadFilesFromGithub } from '../down-git.mjs';
 
-const VERSION = '0.0.1';
-const HELP = ``;
+const VERSION = '0.0.1-rc.1';
+const HELP = `
+  Usage: down-git [options] [url]
+
+  Options:
+
+    -v, --version            output the version number
+    -h, --help               output the usage information
+    --compress               compress the files into a zip archive {'1': true, '0': false}
+    --token                  use the github access token to increase rate limits
+    --proxy                  use the http(s) proxy server to avoid internet errors
+    --url                    input the github file or directory link
+`;
 
 function getArgs(argv) {
     assert(Array.isArray(argv));
@@ -51,7 +62,7 @@ function getArgs(argv) {
 
 async function parseArgs() {
     const options = {
-        uncompress: false,
+        compress: true,
         token: '',
         proxy: '',
         url: ''
@@ -82,8 +93,13 @@ async function parseArgs() {
                 break;
             }
 
-            case '--uncompress': {
-                options.uncompress = true;
+            case '--compress': {
+                if (!next || next[0] === '-')
+                    throw new Error(`Invalid option for: ${arg}.`);
+
+                options.compress = { '1': true, '0': false }[next];
+
+                i += 1;
                 break;
             }
 
@@ -148,6 +164,7 @@ async function parseArgs() {
         return 1;
     }
 
+    stdout.write(`downloading ${options.url}\n`);
     downloadFilesFromGithub(options);
 
     return 0;

@@ -2,11 +2,11 @@
  * Original file: https://github.com/MinhasKamal/DownGit/blob/master/app/home/down-git.js
  */
 
-import fs from "fs";
-import path from "path";
-import axios from "axios";
-import JSZip from "jszip";
-import { HttpsProxyAgent } from "https-proxy-agent";
+import fs from 'fs';
+import path from 'path';
+import axios from 'axios';
+import JSZip from 'jszip';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 
 /**
  * @typedef {{url:string, fileName?:string, rootDirectory?:string}} Parameter
@@ -22,18 +22,18 @@ import { HttpsProxyAgent } from "https-proxy-agent";
  */
 const parseInfo = (options) => {
     const repoPath = new URL(options.url).pathname;
-    const splitPath = repoPath.split("/");
+    const splitPath = repoPath.split('/');
 
     const repoInfo = {
-        author: "",
-        repository: "",
-        branch: "",
-        rootName: "",
-        resPath: "",
-        urlPrefix: "",
-        urlPostfix: "",
-        downloadFileName: "",
-        rootDirectoryName: ""
+        author: '',
+        repository: '',
+        branch: '',
+        rootName: '',
+        resPath: '',
+        urlPrefix: '',
+        urlPostfix: '',
+        downloadFileName: '',
+        rootDirectoryName: ''
     };
 
     repoInfo.author = splitPath[1];
@@ -46,25 +46,25 @@ const parseInfo = (options) => {
             repoPath.indexOf(splitPath[4]) + splitPath[4].length + 1
         );
     }
-    repoInfo.urlPrefix = "https://api.github.com/repos/" +
-        repoInfo.author + "/" + repoInfo.repository + "/contents/";
-    repoInfo.urlPostfix = "?ref=" + repoInfo.branch;
+    repoInfo.urlPrefix = 'https://api.github.com/repos/' +
+        repoInfo.author + '/' + repoInfo.repository + '/contents/';
+    repoInfo.urlPostfix = '?ref=' + repoInfo.branch;
 
-    if (!options.fileName || options.fileName == "") {
+    if (!options.fileName || options.fileName == '') {
         repoInfo.downloadFileName = repoInfo.rootName;
     } else {
         repoInfo.downloadFileName = options.fileName;
     }
 
-    if (options.rootDirectory == "false") {
-        repoInfo.rootDirectoryName = "";
+    if (options.rootDirectory == 'false') {
+        repoInfo.rootDirectoryName = '';
 
-    } else if (!options.rootDirectory || options.rootDirectory == "" ||
-        options.rootDirectory == "true") {
-        repoInfo.rootDirectoryName = repoInfo.rootName + "/";
+    } else if (!options.rootDirectory || options.rootDirectory == '' ||
+        options.rootDirectory == 'true') {
+        repoInfo.rootDirectoryName = repoInfo.rootName + '/';
 
     } else {
-        repoInfo.rootDirectoryName = options.rootDirectory + "/";
+        repoInfo.rootDirectoryName = options.rootDirectory + '/';
     }
 
     return repoInfo;
@@ -73,9 +73,9 @@ const parseInfo = (options) => {
 /**
  * @param {Progress} progress 
  * @param {RepoInfo} repoInfo 
- * @param {boolean} uncompress 
+ * @param {boolean} compress 
  */
-const downloadDir = (progress, repoInfo, uncompress) => {
+const downloadDir = (progress, repoInfo, compress) => {
     progress.isProcessing = true;
 
     const dirPaths = [];
@@ -83,7 +83,7 @@ const downloadDir = (progress, repoInfo, uncompress) => {
     const requestedPromises = [];
 
     dirPaths.push(repoInfo.resPath);
-    mapFileAndDirectory(dirPaths, files, requestedPromises, progress, repoInfo, uncompress);
+    mapFileAndDirectory(dirPaths, files, requestedPromises, progress, repoInfo, compress);
 }
 
 /**
@@ -92,12 +92,12 @@ const downloadDir = (progress, repoInfo, uncompress) => {
  * @param {RequestedPromises} requestedPromises 
  * @param {Progress} progress 
  * @param {RepoInfo} repoInfo 
- * @param {boolean} uncompress
+ * @param {boolean} compress 
  */
-const mapFileAndDirectory = (dirPaths, files, requestedPromises, progress, repoInfo, uncompress) => {
+const mapFileAndDirectory = (dirPaths, files, requestedPromises, progress, repoInfo, compress) => {
     axios.get(repoInfo.urlPrefix + dirPaths.pop() + repoInfo.urlPostfix).then((response) => {
         for (let i = response.data.length - 1; i >= 0; i--) {
-            if (response.data[i].type == "dir") {
+            if (response.data[i].type == 'dir') {
                 dirPaths.push(response.data[i].path);
 
             } else {
@@ -113,9 +113,9 @@ const mapFileAndDirectory = (dirPaths, files, requestedPromises, progress, repoI
         }
 
         if (dirPaths.length <= 0) {
-            downloadFiles(files, requestedPromises, progress, repoInfo, uncompress);
+            downloadFiles(files, requestedPromises, progress, repoInfo, compress);
         } else {
-            mapFileAndDirectory(dirPaths, files, requestedPromises, progress, repoInfo, uncompress);
+            mapFileAndDirectory(dirPaths, files, requestedPromises, progress, repoInfo, compress);
         }
     });
 }
@@ -125,21 +125,12 @@ const mapFileAndDirectory = (dirPaths, files, requestedPromises, progress, repoI
  * @param {RequestedPromises} requestedPromises 
  * @param {Progress} progress 
  * @param {RepoInfo} repoInfo 
- * @param {boolean} uncompress 
+ * @param {boolean} compress 
  */
-const downloadFiles = (files, requestedPromises, progress, repoInfo, uncompress) => {
+const downloadFiles = (files, requestedPromises, progress, repoInfo, compress) => {
     const zip = new JSZip();
     Promise.all(requestedPromises).then(() => {
-        if (uncompress) {
-            for (let i = files.length - 1; i >= 0; i--) {
-                const content = repoInfo.rootDirectoryName + files[i].path.substring(decodeURI(repoInfo.resPath).length + 1);
-                if (!fs.existsSync(path.dirname(content))) {
-                    fs.mkdirSync(path.dirname(content), { recursive: true });
-                }
-                fs.writeFileSync(content, files[i].data);
-            }
-            progress.isProcessing = false;
-        } else {
+        if (compress) {
             for (let i = files.length - 1; i >= 0; i--) {
                 zip.file(
                     repoInfo.rootDirectoryName + files[i].path.substring(decodeURI(repoInfo.resPath).length + 1),
@@ -148,9 +139,19 @@ const downloadFiles = (files, requestedPromises, progress, repoInfo, uncompress)
             }
 
             progress.isProcessing = false;
-            zip.generateAsync({ type: "uint8array" }).then((content) => {
-                fs.writeFileSync(repoInfo.downloadFileName + ".zip", content);
+            zip.generateAsync({ type: 'uint8array' }).then((content) => {
+                fs.writeFileSync(repoInfo.downloadFileName + '.zip', content);
             });
+        } else {
+            for (let i = files.length - 1; i >= 0; i--) {
+                const content = repoInfo.rootDirectoryName + files[i].path.substring(decodeURI(repoInfo.resPath).length + 1);
+                if (!fs.existsSync(path.dirname(content))) {
+                    fs.mkdirSync(path.dirname(content), { recursive: true });
+                }
+                fs.writeFileSync(content, files[i].data);
+            }
+
+            progress.isProcessing = false;
         }
     });
 }
@@ -163,7 +164,7 @@ const downloadFiles = (files, requestedPromises, progress, repoInfo, uncompress)
  * @param {Progress} progress 
  */
 const getFile = (path, url, files, requestedPromises, progress) => {
-    const promise = axios.get(url, { responseType: "arraybuffer" }).then((file) => {
+    const promise = axios.get(url, { responseType: 'arraybuffer' }).then((file) => {
         files.push({ path: path, data: file.data });
         progress.downloadedFiles = files.length;
     }).catch((error) => {
@@ -178,26 +179,26 @@ const getFile = (path, url, files, requestedPromises, progress) => {
  * @param {string} url 
  * @param {Progress} progress 
  * @param {RepoInfo} repoInfo 
- * @param {boolean} uncompress
+ * @param {boolean} compress 
  */
-const downloadFile = (url, progress, repoInfo, uncompress) => {
+const downloadFile = (url, progress, repoInfo, compress) => {
     progress.isProcessing = true;
     progress.downloadedFiles = 0;
     progress.totalFiles = 1;
 
-    axios.get(url, { responseType: "arraybuffer" }).then((file) => {
+    axios.get(url, { responseType: 'arraybuffer' }).then((file) => {
         progress.downloadedFiles = 1;
-        if (uncompress) {
-            progress.isProcessing = false;
-            fs.writeFileSync(repoInfo.downloadFileName + ".zip", file.data);
-        } else {
+        if (compress) {
             const zip = new JSZip();
             zip.file(repoInfo.rootName, file.data);
 
             progress.isProcessing = false;
-            zip.generateAsync({ type: "uint8array" }).then((content) => {
-                fs.writeFileSync(repoInfo.downloadFileName + ".zip", content);
+            zip.generateAsync({ type: 'uint8array' }).then((content) => {
+                fs.writeFileSync(repoInfo.downloadFileName + '.zip', content);
             });
+        } else {
+            progress.isProcessing = false;
+            fs.writeFileSync(repoInfo.downloadFileName + '.zip', file.data);
         }
     }).catch((error) => {
         console.log(error);
@@ -206,7 +207,7 @@ const downloadFile = (url, progress, repoInfo, uncompress) => {
 }
 
 /**
- * @param {{uncompress?:boolean, token?:string, proxy?:string} & Parameter} options
+ * @param {{compress?:boolean, token?:string, proxy?:string} & Parameter} options 
  * @param {Progress} progress 
  */
 const downloadFilesFromGithub = (options, progress = {}) => {
@@ -225,22 +226,22 @@ const downloadFilesFromGithub = (options, progress = {}) => {
 
     const repoInfo = parseInfo(options);
 
-    if (!repoInfo.resPath || repoInfo.resPath == "") {
-        if (!repoInfo.branch || repoInfo.branch == "") {
-            repoInfo.branch = "master";
+    if (!repoInfo.resPath || repoInfo.resPath == '') {
+        if (!repoInfo.branch || repoInfo.branch == '') {
+            repoInfo.branch = 'master';
         }
 
-        const downloadUrl = "https://github.com/" + repoInfo.author + "/" +
-            repoInfo.repository + "/archive/" + repoInfo.branch + ".zip";
+        const downloadUrl = 'https://github.com/' + repoInfo.author + '/' +
+            repoInfo.repository + '/archive/' + repoInfo.branch + '.zip';
 
         downloadFile(downloadUrl, progress, repoInfo, false);
 
     } else {
         axios.get(repoInfo.urlPrefix + repoInfo.resPath + repoInfo.urlPostfix).then((response) => {
             if (response.data instanceof Array) {
-                downloadDir(progress, repoInfo, options.uncompress);
+                downloadDir(progress, repoInfo, options.compress);
             } else {
-                downloadFile(response.data.download_url, progress, repoInfo, options.uncompress);
+                downloadFile(response.data.download_url, progress, repoInfo, options.compress);
             }
 
         }).catch((error) => {

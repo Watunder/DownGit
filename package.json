@@ -1,8 +1,8 @@
 {
   "name": "down-git",
-  "version": "0.0.1",
+  "version": "0.0.1-rc.1",
   "license": "MIT",
-  "module": "./down-git.mjs",
+  "main": "./down-git.mjs",
   "bin": {
     "down-git": "./bin/down-git"
   },
